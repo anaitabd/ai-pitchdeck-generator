@@ -1,0 +1,72 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: ai-pitchdeck-postgres
+    environment:
+      POSTGRES_DB: ai_pitchdeck
+      POSTGRES_USER: pitchdeck_user
+      POSTGRES_PASSWORD: pitchdeck_pass
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - pitchdeck-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pitchdeck_user -d ai_pitchdeck"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: ai-pitchdeck-pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@pitchdeck.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+    ports:
+      - "5050:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    networks:
+      - pitchdeck-network
+    depends_on:
+      - postgres
+
+  localstack:
+    image: localstack/localstack:latest
+    container_name: ai-pitchdeck-localstack
+    environment:
+      SERVICES: s3,lambda,sts
+      DEBUG: 1
+      DATA_DIR: /tmp/localstack/data
+      DOCKER_HOST: unix:///var/run/docker.sock
+      AWS_DEFAULT_REGION: us-east-1
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+    ports:
+      - "4566:4566"  # LocalStack Gateway
+      - "4510-4559:4510-4559"  # External services port range
+    volumes:
+      - "./localstack-init:/etc/localstack/init/ready.d"
+      - localstack_data:/tmp/localstack
+      - "/var/run/docker.sock:/var/run/docker.sock"
+    networks:
+      - pitchdeck-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4566/_localstack/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+networks:
+  pitchdeck-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  pgadmin_data:
+  localstack_data:

@@ -1,0 +1,15 @@
+target/
+!target/ai-pitchdeck-generator-0.0.1-SNAPSHOT.jar
+.git
+.gitignore
+.mvn
+*.md
+docker-compose.yml
+localstack-init/
+src/
+pom.xml
+mvnw
+mvnw.cmd
+.idea
+*.iml
+.vscode
