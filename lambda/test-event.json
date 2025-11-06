@@ -1,0 +1,10 @@
+{
+  "jobId": "550e8400-e29b-41d4-a716-446655440000",
+  "projectId": "660e8400-e29b-41d4-a716-446655440001",
+  "userId": "770e8400-e29b-41d4-a716-446655440002",
+  "s3Key": "uploads/770e8400-e29b-41d4-a716-446655440002/660e8400-e29b-41d4-a716-446655440001/550e8400-e29b-41d4-a716-446655440000_business-plan.txt",
+  "callbackUrl": "http://localhost:8080/api/v1/generate/callback",
+  "llmModel": "claude-sonnet-4-20250514",
+  "systemPrompt": "You are an expert pitch deck consultant. Generate a compelling investor presentation.",
+  "userPrompt": "Create a professional pitch deck based on this business plan."
+}

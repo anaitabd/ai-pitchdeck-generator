@@ -1,0 +1,134 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: AI Pitch Deck Generator Lambda Function
+
+Parameters:
+  S3BucketName:
+    Type: String
+    Default: ai-pitchdeck-uploads
+    Description: S3 bucket for uploads and results
+  
+  AnthropicApiKey:
+    Type: String
+    NoEcho: true
+    Description: Anthropic API key for Claude (optional if using Bedrock)
+    Default: ''
+  
+  UseBedrock:
+    Type: String
+    Default: 'false'
+    AllowedValues: ['true', 'false']
+    Description: Use AWS Bedrock instead of direct Anthropic API
+
+Globals:
+  Function:
+    Timeout: 600
+    MemorySize: 2048
+    Runtime: python3.12
+    Architectures:
+      - x86_64
+    Tracing: Active
+
+Resources:
+  PitchDeckGeneratorFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: ai-pitchdeck-generator
+      Handler: handler.lambda_handler
+      CodeUri: .
+      Description: Generate AI-powered pitch decks using Claude Sonnet 4.5
+      Environment:
+        Variables:
+          S3_BUCKET: !Ref S3BucketName
+          AWS_REGION: !Ref AWS::Region
+          ANTHROPIC_API_KEY: !Ref AnthropicApiKey
+          USE_BEDROCK: !Ref UseBedrock
+          MAX_RETRIES: '3'
+          CALLBACK_TIMEOUT: '30'
+          POWERTOOLS_SERVICE_NAME: ai-pitchdeck-generator
+          POWERTOOLS_LOG_LEVEL: INFO
+          POWERTOOLS_LOGGER_SAMPLE_RATE: 0.1
+          POWERTOOLS_TRACE_DISABLED: 'false'
+          POWERTOOLS_METRICS_NAMESPACE: AIPitchDeck
+      Policies:
+        # S3 permissions
+        - S3ReadPolicy:
+            BucketName: !Ref S3BucketName
+        - S3WritePolicy:
+            BucketName: !Ref S3BucketName
+        # Bedrock permissions (if using)
+        - Statement:
+            - Effect: Allow
+              Action:
+                - bedrock:InvokeModel
+                - bedrock:InvokeModelWithResponseStream
+              Resource:
+                - !Sub 'arn:aws:bedrock:${AWS::Region}::foundation-model/anthropic.claude-3-5-sonnet-*'
+                - !Sub 'arn:aws:bedrock:${AWS::Region}::foundation-model/anthropic.claude-3-opus-*'
+        # CloudWatch metrics
+        - CloudWatchPutMetricPolicy: {}
+        # X-Ray tracing
+        - AWSXRayDaemonWriteAccess: {}
+      Tags:
+        Project: ai-pitchdeck-generator
+        Environment: production
+        ManagedBy: SAM
+
+  # CloudWatch Log Group with retention
+  FunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${PitchDeckGeneratorFunction}
+      RetentionInDays: 30
+
+  # CloudWatch Alarms
+  FunctionErrorAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub ${PitchDeckGeneratorFunction}-errors
+      AlarmDescription: Alert on Lambda function errors
+      MetricName: Errors
+      Namespace: AWS/Lambda
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanThreshold
+      Dimensions:
+        - Name: FunctionName
+          Value: !Ref PitchDeckGeneratorFunction
+
+  FunctionThrottleAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub ${PitchDeckGeneratorFunction}-throttles
+      AlarmDescription: Alert on Lambda function throttles
+      MetricName: Throttles
+      Namespace: AWS/Lambda
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanThreshold
+      Dimensions:
+        - Name: FunctionName
+          Value: !Ref PitchDeckGeneratorFunction
+
+Outputs:
+  FunctionArn:
+    Description: Lambda Function ARN
+    Value: !GetAtt PitchDeckGeneratorFunction.Arn
+    Export:
+      Name: !Sub ${AWS::StackName}-FunctionArn
+  
+  FunctionName:
+    Description: Lambda Function Name
+    Value: !Ref PitchDeckGeneratorFunction
+    Export:
+      Name: !Sub ${AWS::StackName}-FunctionName
+  
+  LogGroupName:
+    Description: CloudWatch Log Group Name
+    Value: !Ref FunctionLogGroup
+    Export:
+      Name: !Sub ${AWS::StackName}-LogGroupName
