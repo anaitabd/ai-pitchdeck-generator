@@ -73,23 +73,28 @@ def extract_text_from_document(content: bytes, s3_key: str) -> str:
         # Plain text files
         return content.decode('utf-8')
     elif file_extension == 'pdf':
-        # For PDF, you would use pypdf or pdfplumber
-        # For now, return a placeholder
-        logger.warning("PDF parsing not implemented, returning raw content")
-        try:
-            return content.decode('utf-8', errors='ignore')
-        except Exception:
-            return "[PDF content - parsing not implemented]"
+        # For PDF, you should use pypdf or pdfplumber
+        # For now, we'll raise an informative error
+        logger.warning("PDF text extraction requires pypdf/pdfplumber library")
+        raise ValueError(
+            "PDF parsing not implemented. Please install 'pypdf' or 'pdfplumber' "
+            "and implement PDF text extraction, or use plain text files."
+        )
     elif file_extension in ['doc', 'docx']:
-        # For Word docs, you would use python-docx
-        logger.warning("Word document parsing not implemented")
-        return "[Word document - parsing not implemented]"
+        # For Word docs, you should use python-docx
+        logger.warning("Word document parsing requires python-docx library")
+        raise ValueError(
+            "Word document parsing not implemented. Please install 'python-docx' "
+            "and implement DOCX text extraction, or use plain text files."
+        )
     else:
-        logger.warning(f"Unsupported file type: {file_extension}")
+        # Try to decode as text with error handling
+        logger.warning(f"Unsupported file type: {file_extension}, attempting text decode")
         try:
-            return content.decode('utf-8', errors='ignore')
-        except Exception:
-            return "[Binary content - cannot decode as text]"
+            return content.decode('utf-8', errors='replace')
+        except Exception as e:
+            logger.error(f"Failed to decode content as text: {e}")
+            raise ValueError(f"Unable to extract text from file type: {file_extension}")
 
 
 @tracer.capture_method
