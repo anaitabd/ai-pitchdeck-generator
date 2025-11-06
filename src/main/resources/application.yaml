@@ -1,3 +1,145 @@
 spring:
   application:
     name: ai-pitchdeck-generator
+  
+  # Database Configuration
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:ai_pitchdeck}
+    username: ${DB_USER:pitchdeck_user}
+    password: ${DB_PASSWORD:pitchdeck_pass}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 5
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+  
+  # JPA Configuration
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+        jdbc:
+          time_zone: UTC
+    show-sql: false
+    open-in-view: false
+  
+  # Flyway Configuration
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    locations: classpath:db/migration
+    validate-on-migrate: true
+  
+  # Servlet Configuration
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 50MB
+      max-request-size: 50MB
+      file-size-threshold: 2KB
+  
+  # Jackson Configuration
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+    deserialization:
+      fail-on-unknown-properties: false
+    default-property-inclusion: non_null
+
+# Server Configuration
+server:
+  port: ${SERVER_PORT:8080}
+  error:
+    include-message: always
+    include-binding-errors: always
+    include-stacktrace: on_param
+    include-exception: false
+
+# Security & JWT Configuration
+security:
+  jwt:
+    secret-key: ${JWT_SECRET_KEY:404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970}
+    expiration-ms: ${JWT_EXPIRATION_MS:86400000} # 24 hours
+    refresh-expiration-ms: ${JWT_REFRESH_EXPIRATION_MS:604800000} # 7 days
+  
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:5173}
+    allowed-methods: GET,POST,PUT,DELETE,PATCH,OPTIONS
+    allowed-headers: "*"
+    allow-credentials: true
+    max-age: 3600
+
+# AWS Configuration
+aws:
+  region: ${AWS_REGION:us-east-1}
+  access-key-id: ${AWS_ACCESS_KEY_ID:test}
+  secret-access-key: ${AWS_SECRET_ACCESS_KEY:test}
+  
+  s3:
+    bucket-name: ${AWS_S3_BUCKET:ai-pitchdeck-uploads}
+    endpoint: ${AWS_S3_ENDPOINT:http://localhost:4566}  # LocalStack endpoint
+    presigned-url-expiration-minutes: ${AWS_S3_PRESIGNED_URL_EXPIRATION:15}
+  
+  lambda:
+    endpoint: ${AWS_LAMBDA_ENDPOINT:http://localhost:4566}  # LocalStack endpoint
+    function-name: ${AWS_LAMBDA_FUNCTION_NAME:ai-pitchdeck-generator}
+
+# LangChain4j / AI Configuration
+langchain4j:
+  anthropic:
+    api-key: ${ANTHROPIC_API_KEY:sk-ant-test-key}
+    model: ${ANTHROPIC_MODEL:claude-sonnet-4-20250514}
+    timeout: 60s
+    max-retries: 3
+    log-requests: true
+    log-responses: false
+  
+  bedrock:
+    enabled: ${BEDROCK_ENABLED:false}
+    region: ${AWS_REGION:us-east-1}
+    model: ${BEDROCK_MODEL:anthropic.claude-3-5-sonnet-20241022-v2:0}
+
+# Application Configuration
+application:
+  generation:
+    max-concurrent-jobs: ${MAX_CONCURRENT_JOBS:5}
+    job-timeout-minutes: ${JOB_TIMEOUT_MINUTES:10}
+    retry-attempts: ${RETRY_ATTEMPTS:3}
+  
+  file-upload:
+    allowed-extensions: pdf,doc,docx,txt,md
+    max-size-mb: 50
+
+# Actuator Configuration
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: when-authorized
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+
+# Logging Configuration
+logging:
+  level:
+    root: INFO
+    com.naitabdallah.aipitchdeck: DEBUG
+    org.springframework.security: DEBUG
+    org.springframework.web: INFO
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+    software.amazon.awssdk: INFO
+    dev.langchain4j: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
